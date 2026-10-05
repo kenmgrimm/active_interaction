@@ -102,19 +102,28 @@ RSpec.shared_examples_for 'a filter' do
       end
     end
 
-    # Some inputs have a #== with side effects, e.g. ActiveRecord relations
-    # load every record when compared. Processing must not call it.
-    context 'with a value whose #== raises' do
+    # Some inputs have a #== with side effects, e.g.
+    # ActiveRecord::AssociationRelation#== loads every record. Processing must
+    # not call it.
+    context 'with a value that tracks calls to #==' do
       let(:value) do
         Class.new do
+          attr_reader :equality_checks
+
+          def initialize
+            @equality_checks = 0
+          end
+
           def ==(_other)
-            raise '#== was called'
+            @equality_checks += 1
+            false
           end
         end.new
       end
 
       it 'does not call #== on the value' do
-        expect { filter.process(value, nil) }.to_not raise_error
+        filter.process(value, nil)
+        expect(value.equality_checks).to be 0
       end
     end
   end
