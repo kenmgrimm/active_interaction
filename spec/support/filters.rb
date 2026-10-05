@@ -101,6 +101,22 @@ RSpec.shared_examples_for 'a filter' do
         expect(error.type).to be :invalid_type
       end
     end
+
+    # Some inputs have a #== with side effects, e.g. ActiveRecord relations
+    # load every record when compared. Processing must not call it.
+    context 'with a value whose #== raises' do
+      let(:value) do
+        Class.new do
+          def ==(_other)
+            raise '#== was called'
+          end
+        end.new
+      end
+
+      it 'does not call #== on the value' do
+        expect { filter.process(value, nil) }.to_not raise_error
+      end
+    end
   end
 
   describe '#default' do
